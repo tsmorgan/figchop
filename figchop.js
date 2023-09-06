@@ -25,9 +25,14 @@ try {
   process.exit(1);
 }
 
-var y = 0 ;
-var h = 4000;
+var y = 0 ; // starting vertical position
+var h = 4000; // size of the chunks
 
+/**
+ * First get the height of the image and do some maths
+ * to understand how many chunks and importantly how
+ * big the final chunk will be (remainder)
+ */
 const metadata = sharp(inputFile).metadata().then((metadata) => {
   console.log(`That image is ${metadata.height}px high.`);
   const quotient = Math.floor(metadata.height/4000);
@@ -37,22 +42,35 @@ const metadata = sharp(inputFile).metadata().then((metadata) => {
   console.log(`${quotient}x 4000px high + 1x ${remainder}px high.`);
   console.log(`- - - `);
   
+  /**
+   * Then loop through grabbing each chunk except the last one.
+   */
   let i;
   for (i = 0; i < quotient; i++) {
     grab(y,4000,i);
     y += 4000;
   }
+  // grab the remaining chunk
   grab(y,remainder,i)
 });
 
-function grab(start_y,grab_h,name)
+/**
+ * This function uses 'sharp' to grab a chunk of the file.
+ * I think sharp messes with the image as it extracts the
+ * chunks because I found I couldn't put the look insize 
+ * this function, it had to site outsize.
+ * 
+ * Note. sharp works asynchronously so once called these 
+ * functions won't return in order.
+ */
+function grab(start_y,grab_height,name)
 {
   // Load the input image
   sharp(inputFile)
     .toBuffer()
     .then((data) => {
       
-      console.log(`Grabbing ${start_y} to ${start_y+grab_h} pixels.`);
+      console.log(`Grabbing ${start_y} to ${start_y+grab_height} pixels.`);
       const image = sharp(data);
       return image.metadata().then((metadata) => 
       {
@@ -60,7 +78,7 @@ function grab(start_y,grab_h,name)
             left: 0,
             top: start_y,
             width: metadata.width,
-            height: grab_h,
+            height: grab_height,
           })
           .toFile(`${outputDirectory}/tile_${name}.jpg`, (err) => {
             if (err) { console.error(err); }
